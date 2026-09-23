@@ -206,10 +206,10 @@ footer{border-top:1px solid var(--line);padding:30px 18px;color:#777;text-align:
 <script>
 const products = {"PisoTab": {"price": 20000, "dp": 5000}, "Standee 4-in-1": {"price": 46000, "dp": 10000}, "Standee 3-in-1": {"price": 35000, "dp": 10000}, "Tabletop 3-in-1": {"price": 33000, "dp": 10000}};
 const sampleVideos = {
-  "PisoTab":"",
-  "Standee 4-in-1":"",
-  "Standee 3-in-1":"",
-  "Tabletop 3-in-1":""
+  "PisoTab":"https://fb.watch/IF61ALZpju/",
+  "Standee 4-in-1":"https://fb.watch/IF66FVvSoT/",
+  "Standee 3-in-1":"https://fb.watch/IF6fa47u24/",
+  "Tabletop 3-in-1":"https://fb.watch/IF6bDvZFAA/"
 };
 const fullDemoVideos = {
   "PisoTab":"",
@@ -218,6 +218,7 @@ const fullDemoVideos = {
   "Tabletop 3-in-1":""
 };
 const FULL_DEMO_PASSWORD = "CHANGE-ME";
+const ORDER_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzLLf3U4HRSYH2QF_TLYHWsBFbv7FyYhmK58_ybxvYthUvMqvi2ThOdBxm-vNM9Z9qi2w/exec";
 
 function choose(p){
   document.getElementById('product').value=p;
@@ -261,16 +262,32 @@ function unlockDemo(){
   else alert('Full Demo link for '+selectedDemo+' is not set yet. Send me your Full Demo video link and I will add it.');
 }
 
-document.getElementById('orderForm').addEventListener('submit',e=>{
+document.getElementById('orderForm').addEventListener('submit',async e=>{
  e.preventDefault();
  const p=product.value, q=Number(qty.value||1), info=products[p];
  const total=info.price*q, requiredDP=info.dp*q, paid=Number(downpayment.value||0);
  if(paid < requiredDP){alert('Minimum required downpayment is '+money(requiredDP)+'.');return;}
  if(paid > total){alert('Downpayment cannot be higher than the total price.');return;}
  const data={id:'JC-'+Date.now().toString().slice(-6),name:name.value,phone:phone.value,product:p,qty:q,total,requiredDP,downpayment:paid,balance:total-paid,address:address.value,paymentMethod:paymentMethod.value,notes:notes.value,createdAt:new Date().toISOString()};
+
+ // Save a local backup on this device.
  const orders=JSON.parse(localStorage.getItem('jc_orders')||'[]');orders.push(data);localStorage.setItem('jc_orders',JSON.stringify(orders));
+
+ // Send the order to the JC VENDO PH Google Apps Script / Google Sheet.
  result.style.display='block';
- result.innerHTML='<strong>Order Request Received!</strong><br>Reference: <b>'+data.id+'</b><br>'+p+' × '+q+'<br>Total: <b>'+money(total)+'</b><br>Downpayment: <b>'+money(paid)+'</b><br>Remaining balance: <b>'+money(data.balance)+'</b><br><br>This demo currently saves the request only on this device. Next we will connect it to a real online order database and notification system.';
+ result.innerHTML='<strong>Submitting order...</strong><br>Please wait a moment.';
+ try {
+   await fetch(ORDER_WEB_APP_URL,{
+     method:'POST',
+     mode:'no-cors',
+     headers:{'Content-Type':'text/plain;charset=utf-8'},
+     body:JSON.stringify(data)
+   });
+   result.innerHTML='<strong>Order Request Sent! ✅</strong><br>Reference: <b>'+data.id+'</b><br>'+p+' × '+q+'<br>Total: <b>'+money(total)+'</b><br>Downpayment: <b>'+money(paid)+'</b><br>Remaining balance: <b>'+money(data.balance)+'</b><br><br>Thank you! JC VENDO PH will contact you regarding your order.';
+ } catch(err) {
+   result.innerHTML='<strong>Order saved on this device.</strong><br>Reference: <b>'+data.id+'</b><br><br>Please contact JC VENDO PH support to confirm your order.';
+   console.error(err);
+ }
  e.target.reset();qty.value=1;updateAmounts();
 });
 updateAmounts();
